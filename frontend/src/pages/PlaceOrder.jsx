@@ -7,9 +7,11 @@ import { toast } from 'react-toastify';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
+const backendUrl = import.meta.env.VITE_BACKEND_URL; // ✅ Use environment variable
+
 const PlaceOrder = () => {
   const navigate = useNavigate();
-  const { backendUrl, token, cartItems, setCartItems, getCartAmount, delivery_fee, products } = useContext(ShopContext);
+  const { token, cartItems, setCartItems, getCartAmount, delivery_fee, products } = useContext(ShopContext);
   const [method, setMethod] = useState('cod');
 
   const [formData, setFormData] = useState({
@@ -46,30 +48,29 @@ const PlaceOrder = () => {
           }
         });
       });
-      console.log(formData);
-      
-      let orderData = {
+
+      const orderData = {
         address: formData,
         items: orderItems,
         amount: getCartAmount() + delivery_fee
       };
 
-      switch (method) {
-        case 'cod':
-          const response = await axios.post(`${backendUrl}/api/order/place`, orderData, { headers: { token } });
-          if (response.data.success) {
-            setCartItems({});
-            navigate('/orders');
-          } else {
-            toast.error(response.data.message);
-          }
-          break;
-        default:
-          break;
+      if (method === 'cod') {
+        const response = await axios.post(`${backendUrl}/api/order/place`, orderData, { headers: { token } });
+        if (response.data.success) {
+          setCartItems({});
+          navigate('/orders');
+        } else {
+          toast.error(response.data.message);
+        }
+      } else {
+        // Stripe/Razorpay integration placeholder
+        toast.info(`Payment method "${method}" not implemented yet`);
       }
+
     } catch (error) {
       console.error(error);
-      toast.error(error.message);
+      toast.error(error.response?.data?.message || error.message);
     }
   };
 
@@ -95,6 +96,7 @@ const PlaceOrder = () => {
         </div>
         <input required onChange={onChangeHandler} name='phone' value={formData.phone} className='border border-gray-300 rounded py-1.5 px-3.5 w-full' type="number" placeholder='Phone' />
       </div>
+
       <div className='mt-8'>
         <div className='mt-8 min-w-80'>
           <CartTotal />
@@ -107,7 +109,7 @@ const PlaceOrder = () => {
               <img className={`h-5 mx-4`} src={assets.stripe_logo} alt="Stripe" />
             </div>
             <div onClick={() => setMethod('razorpay')} className='flex items-center gap-3 border p-2 px-3 cursor-pointer'>
-              <p className={`min-w-3.5 h-3.5 border rounded-full ${method === 'razorpay' ? 'bg-green-400' : ''}`} ></p>
+              <p className={`min-w-3.5 h-3.5 border rounded-full ${method === 'razorpay' ? 'bg-green-400' : ''}`}></p>
               <img className={`h-5 mx-4`} src={assets.razorpay_logo} alt="Razorpay" />
             </div>
             <div onClick={() => setMethod('cod')} className='flex items-center gap-3 border p-2 px-3 cursor-pointer'>
